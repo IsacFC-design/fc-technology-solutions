@@ -3182,7 +3182,7 @@ window.__init3d = function () {
     try {
       fetch(SUPABASE.url.replace(/\/$/, '') + '/rest/v1/' + SUPABASE.table, {
         method: 'POST', keepalive: true,
-        headers: { 'Content-Type': 'application/json', apikey: SUPABASE.anonKey, Authorization: 'Bearer ' + SUPABASE.anonKey, Prefer: 'return=minimal' },
+        headers: (function () { var h = { 'Content-Type': 'application/json', apikey: SUPABASE.anonKey, Prefer: 'return=minimal' }; if (/^eyJ/.test(SUPABASE.anonKey)) h.Authorization = 'Bearer ' + SUPABASE.anonKey; return h; })(),
         body: JSON.stringify(lead)
       }).catch(function () { delete sent[key]; });
     } catch (e) { delete sent[key]; }
