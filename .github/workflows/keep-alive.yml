@@ -1,0 +1,41 @@
+name: keep-alive
+
+# Cronjob: se ejecuta solo, todos los días, sin tocar tu PC.
+# 1) Visita el sitio en Vercel (comprueba que responde).
+# 2) Si configuraste Supabase, hace una consulta mínima para que el proyecto gratuito NO se pause por inactividad.
+on:
+  schedule:
+    - cron: '23 13 * * *'   # todos los días 13:23 UTC (08:23 Perú/Colombia)
+  workflow_dispatch:        # también puedes lanzarlo a mano desde la pestaña Actions
+
+permissions:
+  contents: read
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Ping al sitio (Vercel)
+        env:
+          SITE_URL: ${{ vars.SITE_URL || 'https://fc-technology-solutions.vercel.app' }}
+        run: |
+          code=$(curl -sS -o /dev/null -w '%{http_code}' --retry 3 --retry-delay 5 --max-time 30 "$SITE_URL/")
+          echo "Sitio $SITE_URL -> HTTP $code"
+          [ "$code" -ge 200 ] && [ "$code" -lt 400 ]
+
+      - name: Ping a Supabase (evita que se pause)
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
+            echo "Supabase no configurado (secrets SUPABASE_URL y SUPABASE_ANON_KEY); se omite."
+            exit 0
+          fi
+          code=$(curl -sS -o /dev/null -w '%{http_code}' --retry 3 --retry-delay 5 --max-time 30 \
+            -X POST "$SUPABASE_URL/rest/v1/rpc/ping" \
+            -H "apikey: $SUPABASE_ANON_KEY" -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
+            -H 'Content-Type: application/json' -d '{}')
+          echo "Supabase -> HTTP $code"
+          [ "$code" -ge 200 ] && [ "$code" -lt 300 ]
